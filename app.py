@@ -20,9 +20,9 @@ amount = st.number_input("Enter donation amount (₹)", min_value=1, step=1)
 if st.button("Donate via UPI"):
     upi_link = f"upi://pay?pa={UPI_ID}&pn={PAYEE_NAME}&am={amount}&cu=INR"
     st.markdown(
-    f'<a href="{upi_link}" target="_blank" style="font-size:18px;color:green;text-decoration:underline;">Click here to Donate ₹{amount}</a>',
-    unsafe_allow_html=True
-)
+        f'<a href="{upi_link}" target="_blank" style="font-size:18px;color:green;text-decoration:underline;">Click here to Donate ₹{amount}</a>',
+        unsafe_allow_html=True
+    )
 
 st.markdown("---")
 st.header("✅ Confirm Your Donation")
@@ -49,19 +49,28 @@ with st.form("donor_form"):
         else:
             df.to_csv(csv_file, index=False)
 
-        # Send SMS to donor
+        # Send SMS to donor and organizer
         donor_msg = f"Thank you {name} for donating ₹{donated_amount} to Ganpati Utsav. Your support means a lot!"
         organizer_msg = f"New donation from {name}: ₹{donated_amount}. Phone: {mobile}"
 
         headers = {
             'authorization': FAST2SMS_API_KEY,
-            'Content-Type': "application/x-www-form-urlencoded"
+            'Content-Type': "application/json"
         }
 
         def send_sms(message, phone):
-            payload = f"sender_id=FSTSMS&message={message}&language=english&route=p&numbers={phone}"
+            payload = {
+                "sender_id": "FSTSMS",
+                "message": message,
+                "language": "english",
+                "route": "q",  # Use transactional route
+                "numbers": phone
+            }
             try:
-                requests.post("https://www.fast2sms.com/dev/bulkV2", data=payload, headers=headers)
+                response = requests.post("https://www.fast2sms.com/dev/bulkV2", json=payload, headers=headers)
+                print("SMS response:", response.status_code, response.text)
+                if response.status_code != 200:
+                    st.warning(f"SMS not sent: {response.text}")
             except Exception as e:
                 st.error(f"Error sending SMS: {e}")
 
